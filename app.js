@@ -65,14 +65,18 @@ function render() {
 // MOUSE CLICK EVENT LISTENER
 // DRAWS NEW VERTEX AT MOUSE POSITION
 //
-window.addEventListener('click', (e) => {
-    const x = e.x;
-    const y = e.y;
-    console.log( 'click',x,y );
-    gl.uniform1f(shader.pointers.size, 20);
-    addRandomVertex( );
-    updateBuffers();
-    gl.drawArrays(gl.POINTS, 0, vertices);
+window.addEventListener('mousedown', (e) => {
+    if (e.button === 0 && e.target === canvas) {
+        const rect = e.target.getBoundingClientRect();
+        // CALCULATE NORMAL DEVICE COORDINATES NDC
+        const x = (e.clientX - rect.left) / canvas.width * 2 - 1;
+        const y = (rect.bottom - e.clientY) / canvas.height * 2 - 1;
+        console.log( 'click',x,y );
+        gl.uniform1f(shader.pointers.size, 20);
+        addXYZVertex( [x,y,0] );
+        updateBuffers();
+        gl.drawArrays(gl.POINTS, 0, vertices);
+    }
 });
 
 //
