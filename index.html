@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de-DE">
+<head>
+    <meta charset="utf-8">
+    <title> sexy2d </title>
+    <script src="app.js" type="module" defer></script>
+    <script id="vshader" type="x-shader/x-vertex" >
+
+       // uniform float u_time_now; // TODO
+        uniform float u_point_size;
+
+        attribute vec3 a_vertex_position;
+        attribute vec4 a_vertex_color;
+//         attribute uint a_time_to_live; // TODO
+  //      attribute uint a_time_init; // TODO
+
+        varying vec4 frag_color;
+       // varying float frag_ttl; // TODO
+
+        void main()
+        {
+            frag_color = a_vertex_color;
+            gl_PointSize = u_point_size;
+            gl_Position = vec4(a_vertex_position, 1.0);
+        }
+
+    </script>
+
+    <script id="fshader" type="x-shader/x-fragment" >
+        precision mediump float;
+        varying vec4 frag_color;
+        void main()
+        {
+            gl_FragColor = frag_color;
+        }
+
+    </script>
+</head>
+<body>
+<canvas id="canvas" width="800px" height="800px"> Browser or device unsupported </canvas>
+</body>
+</html>
