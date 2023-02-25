@@ -1,15 +1,21 @@
 //
-// GLOBAL ARRAY FOR VERTICES
+// GLOBAL ARRAY FOR VERTICES AND COLORS AND POINTSIZE
 //
 let vertices = 0;
+let pointsize = 2;
 let vArray = [], cArray = [];
-let vBuffer, cBuffer;
+let vBuffer, cBuffer, tBuffer;
 //
 // GLOBAL OPENGL OBJECTS
 //
 let canvas;
 let gl;
 let shader;
+//
+// GLOBAL VARIABLES FOR MOUSE TRACKING
+//
+let prevClientX;
+let prevClientY;
 
 /** INITIALIZE WEBGL **/
 window.onload = () =>
@@ -55,29 +61,40 @@ window.onload = () =>
 //
 // MAIN RENDER LOOP
 //
-function render() {
+function render( ) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.drawArrays(gl.POINTS, 0, vertices);
     requestAnimationFrame(render);
 }
 
 //
-// MOUSE CLICK EVENT LISTENER
-// DRAWS NEW VERTEX AT MOUSE POSITION
+// MOUSE EVENT LISTENERS
+// DRAWS NEW VERTEX AT MOUSE POSITION WHILE HOLDING LMB
 //
+let mouseDown = false;
 window.addEventListener('mousedown', (e) => {
-    if (e.button === 0 && e.target === canvas) {
-        const rect = e.target.getBoundingClientRect();
-        // CALCULATE NORMAL DEVICE COORDINATES NDC
-        const x = (e.clientX - rect.left) / canvas.width * 2 - 1;
-        const y = (rect.bottom - e.clientY) / canvas.height * 2 - 1;
-        console.log( 'click',x,y );
-        gl.uniform1f(shader.pointers.size, 20);
-        addXYZVertex( [x,y,0] );
+    if ( e.button === 0 && e.target === canvas ) { // LMB
+        mouseDown = true;
+        const ndc = getNormalDeviceCoords( e );
+        addXYZVertex( [ndc.x, ndc.y, 0]);
         updateBuffers();
-        gl.drawArrays(gl.POINTS, 0, vertices);
     }
 });
+window.addEventListener('mousemove', (e) => {
+    if ( mouseDown && e.target === canvas ) {
+        const ndc = getNormalDeviceCoords( e );
+        addXYZVertex( [ndc.x, ndc.y, 0] );
+        updateBuffers();
+    }
+});
+window.addEventListener('mouseup', (e) => {
+    if ( e.button === 0 ) { // LMB
+        mouseDown = false;
+    }
+});
+///
+///
+///
 
 //
 // ACCEPTS GL CONTEXT
@@ -145,47 +162,6 @@ function compileShader( type, code ) {
 }
 
 //
-// ADDS A VERTEX AT XYZ WITH RGBA COLOR
-//
-function addVertex( xyz, rgba ){
-    vArray.push(xyz[0],xyz[1],xyz[2]);
-    cArray.push(rgba[0],rgba[1],rgba[2],rgba[3]);
-    vertices += 1;
-}
-
-//
-// ADDS A VERTEX AT XYZ WITH RANDOM COLOR
-//
-function addXYZVertex( xyz ) {
-    addVertex( xyz, [rand(),rand(),rand(),1.0] );
-}
-
-//
-// ADDS A VERTEX AT A RANDOM POSITION WITH RANDOM COLORS
-//
-function addRandomVertex( ) {
-    addVertex( [randi(), randi(), 0], [rand(), rand(), rand(), 1.0] );
-}
-
-//
-// Random Number [0,1]
-//
-function rand( ) {
-    return Math.random( );
-}
-
-//
-// Random Number [-1,1]
-//
-function randi( ) {
-    return Math.random( ) * 2 - 1;
-}
-
-function updatePointSize( x ){
-    gl.uniform1f( shader.pointers.size, 10 );
-}
-
-//
 // PUSHES BUFFERS TO WEBGL
 //
 function updateBuffers( ) {
@@ -194,7 +170,7 @@ function updateBuffers( ) {
     //   UNIFOMRS
     //
     {
-        updatePointSize( 10 );
+        updatePointSize( pointsize );
     }
     //
     // ATTRIBUTES
@@ -227,5 +203,54 @@ function updateBuffers( ) {
             0,
             0
         )
+
+        // gl.vertexAttrib1f()
+        //
+        // gl.bindBuffer( gl.ARRAY_BUFFER, tBuffer );
+        // gl.bufferData( (gl.ARRAY_BUFFER, new Float32Array(tArray), gl))
     }
+}
+//
+// RETURNS NORMAL DEVICE COORDINATES NDC FOR OPENGL CANVAS
+//
+function getNormalDeviceCoords( e ) {
+    const rect = e.target.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left) / canvas.width * 2 - 1,
+        y: (rect.bottom - e.clientY) / canvas.height * 2 - 1
+    };
+    }
+
+//
+// ADDS A VERTEX AT XYZ WITH RGBA COLOR
+//
+function addVertex( xyz, rgba ){
+    vArray.push(xyz[0],xyz[1],xyz[2]);
+    cArray.push(rgba[0],rgba[1],rgba[2],rgba[3]);
+    vertices += 1;
+}
+
+//
+// ADDS A VERTEX AT XYZ WITH RANDOM COLOR
+//
+function addXYZVertex( xyz ) {
+    addVertex( xyz, [rand(),rand(),rand(),1.0] );
+}
+
+//
+// Random Number [0,1]
+//
+function rand( ) {
+    return Math.random( );
+}
+
+//
+// Random Number [-1,1]
+//
+function randi( ) {
+    return Math.random( ) * 2 - 1;
+}
+
+function updatePointSize( x ){
+    gl.uniform1f( shader.pointers.size, x );
 }
