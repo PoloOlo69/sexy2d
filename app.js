@@ -2,7 +2,7 @@
 // GLOBAL ARRAY FOR VERTICES AND COLORS AND POINTSIZE
 //
 let vertices = 0;
-let pointsize = 2;
+let pointsize = 10;
 let vArray = [], cArray = [];
 let vBuffer, cBuffer, tBuffer;
 //
@@ -16,7 +16,11 @@ let shader;
 //
 let prevClientX;
 let prevClientY;
-
+let now;
+let then;
+let frametime = 0;
+let counter = 0;
+let fps = 0;
 /** INITIALIZE WEBGL **/
 window.onload = () =>
 {
@@ -51,6 +55,9 @@ window.onload = () =>
     vBuffer = gl.createBuffer( );
     cBuffer = gl.createBuffer( );
 
+    // SET TIME
+    then = Date.now() / 1000;
+
     // PUSH BUFFERS TO GPU
     updateBuffers( );
 
@@ -62,9 +69,34 @@ window.onload = () =>
 // MAIN RENDER LOOP
 //
 function render( ) {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.POINTS, 0, vertices);
-    requestAnimationFrame(render);
+    // CLEAR CANVAS
+    gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+    // DRAW SCENE
+    gl.drawArrays( gl.POINTS, 0, vertices );
+    // UPDATE BUFFERS
+    renderTime();
+    requestAnimFrame( render );
+}
+
+//
+// STES TIME DELTA BETWEEN CURRENT LAST AND CURRENT FRAME
+//
+function renderTime(){
+
+    now = Date.now() / 1000;
+
+    frametime = now - then;
+    fps =  1 / frametime;
+    then = now;
+
+    if( ++counter >= 20 ){
+        document.getElementById("frametime").innerHTML = 'frametime: ~'+ frametime.toFixed(4) +'s';
+        document.getElementById("fps").innerHTML = 'frames: ~'+fps.toFixed()+'/s';
+        counter = 0;
+    }
+
+    updateFrametime();
+
 }
 
 //
@@ -132,7 +164,8 @@ function initShader( vshadersource, fshadersource ) {
         pointers: {
             vpos: gl.getAttribLocation( shader, 'a_vertex_position' ),
             vcol: gl.getAttribLocation( shader, 'a_vertex_color' ),
-            size: gl.getUniformLocation( shader, 'u_point_size' )
+            size: gl.getUniformLocation( shader, 'u_point_size' ),
+            time: gl.getUniformLocation( shader, 'u_time' ),
         }
     };
 }
@@ -170,7 +203,8 @@ function updateBuffers( ) {
     //   UNIFOMRS
     //
     {
-        updatePointSize( pointsize );
+        updatePointSize( );
+        updateFrametime( );
     }
     //
     // ATTRIBUTES
@@ -251,6 +285,13 @@ function randi( ) {
     return Math.random( ) * 2 - 1;
 }
 
-function updatePointSize( x ){
-    gl.uniform1f( shader.pointers.size, x );
+function updatePointSize( ){
+    gl.uniform1f( shader.pointers.size, pointsize );
+}
+
+//
+// SETS UNIFORM FRAMETIME INSIDE SHADER
+//
+function updateFrametime( ){
+    gl.uniform1f( shader.pointers.time, frametime );
 }

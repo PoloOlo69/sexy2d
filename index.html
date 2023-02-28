@@ -4,9 +4,11 @@
     <meta charset="utf-8">
     <title> sexy2d </title>
     <script src="app.js" type="module" defer></script>
+    <script type="text/javascript" src="./webgl-utils.js"></script>
+
     <script id="vshader" type="x-shader/x-vertex" >
 
-       // uniform float u_time_now; // TODO
+        uniform float u_time;
         uniform float u_point_size;
 
         attribute vec3 a_vertex_position;
@@ -21,7 +23,8 @@
         {
             frag_color = a_vertex_color;
             gl_PointSize = u_point_size;
-            gl_Position = vec4(a_vertex_position, 1.0);
+            vec3 pos = a_vertex_position + vec3(5.0, 5.0, 0.0) * u_time;
+            gl_Position = vec4(pos, 1.0);
         }
 
     </script>
@@ -38,5 +41,8 @@
 </head>
 <body>
 <canvas id="canvas" width="800px" height="800px"> Browser or device unsupported </canvas>
+<label id="frametime">frametime:</label>
+<label id="fps">fps:</label>
+
 </body>
 </html>
