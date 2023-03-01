@@ -58,11 +58,12 @@ window.onload = () =>
 
     // CREATE OPENGL BUFFERS
     initBuffers();
-
+    fb = vFeedback;
+    vao = vBuffer;
     // RENDER LOOP
     render();
 }
-
+let fb, vao;
 //
 // MAIN RENDER LOOP
 //
@@ -72,55 +73,29 @@ function render( ) {
     // UPDATE BUFFERS
     renderTime();
 
-    gl.bindBufferBase( gl.TRANSFORM_FEEDBACK_BUFFER, 0, vFeedback );
-    gl.beginTransformFeedback( gl.POINTS );
+    gl.bindBufferBase( gl.TRANSFORM_FEEDBACK_BUFFER, 0, fb );
+    gl.bindBuffer( gl.ARRAY_BUFFER, vao );
 
+    gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
+    gl.enableVertexAttribArray( shader.pointers.apos );
+    gl.beginTransformFeedback( gl.POINTS );
     gl.drawArrays( gl.POINTS, 0, vertices );
 
     gl.endTransformFeedback();
     gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
 
-    // getBufferContents(vBuffer);
-    // getBufferContents(vFeedback);
-
+    if(vao===vBuffer){
+        vao = vFeedback;
+        fb = vBuffer;
+    } else {
+        vao = vBuffer;
+        fb = vFeedback;
+    }
     requestAnimFrame( render );
 }
 
 //-- BIG SHOUT OUT TO MR ANDREW ADAMSON REALLY HELPED ME TO GRASP HOW TO WEBGL --//
 // !!!! https://www.youtube.com/watch?v=ro4bDXcISms !!!!
-const getBufferContents = (buffer) => {
-    // Consider this `sync` object as a flag. It will be dropped
-    // into WebGL's instruction pipeline. When WebGL reaches
-    // this sync object, it will set its status two one of FOUR
-    // values.
-    const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-
-    const checkStatus = () => {
-        // Get the status
-        const status = gl.clientWaitSync(sync, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
-
-        if (status === gl.TIMEOUT_EXPIRED) {
-            console.log('GPU is still busy. Let\'s wait some more.');
-            setTimeout(checkStatus);
-        } else if (status === gl.WAIT_FAILED) {
-            console.error('Something bad happened and we won\'t get any response.');
-        } else  {
-            // This code will be reached if the status is either
-            // CONDITION_SATISFIED or SIGNALED_ALREADY. We don't
-            // really care which status it is as long as one of
-            // these was found. So we can safely read the buffer data
-            // (assuming another draw call hasn't initiated more
-            // changes....)
-            const view = new Float32Array(vertices*3);
-            gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, buffer);
-            gl.getBufferSubData(gl.TRANSFORM_FEEDBACK_BUFFER, 0, view);
-            gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, null);
-            console.log(view);
-        }
-    };
-
-    setTimeout(checkStatus);
-};
 
 //
 // UPDATES UNIFORMS AND HANDLES FEEDBACK
@@ -269,16 +244,13 @@ function compileShader( type, code ) {
 
 function initBuffers() {
 
-    gl.uniform1f( shader.pointers.size, pointsize );
-    gl.uniform1f( shader.pointers.time, now );
-
     {
         // CREATE BUFFER
         vBuffer = gl.createBuffer( );
         // SELECT WHICH BUFFER TO USE
         gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
         // FILL BOUND BUFFER WITH DATA
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STATIC_DRAW );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
         // SPECIFY DATA LAYOUT
         gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
         // "CONNECT" ATTRIBUTE AND BUFFER
@@ -308,11 +280,18 @@ function initBuffers() {
         // SELECT BUFFER
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
         // FILL WITH DATA
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STATIC_DRAW );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STREAM_READ );
+        // "CONNECT" ATTRIBUTE AND BUFFER
+        gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
+        // "CONNECT" ATTRIBUTE AND BUFFER
+        gl.enableVertexAttribArray( shader.pointers.apos );
     }
 
     gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
+
+    gl.uniform1f( shader.pointers.size, pointsize );
+    gl.uniform1f( shader.pointers.time, now );
 
 }
 //
@@ -321,13 +300,13 @@ function initBuffers() {
 function updateBuffers( ) {
 
         gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STATIC_DRAW );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STREAM_READ );
 
         gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
         // gl.bufferSubData( gl.ARRAY_BUFFER, vertices, new Float32Array(cBufferData),0 , cBufferData.length );
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STATIC_DRAW );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
 
         gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
