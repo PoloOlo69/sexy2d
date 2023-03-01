@@ -1,26 +1,26 @@
 //
-// GLOBAL ARRAY FOR VERTICES AND COLORS AND POINTSIZE
+// GLOBAL ARRAY FOR VERTICES, COLORS AND POINTSIZE
 //
 let vertices = 0;
 let pointsize = 10;
-let vArray = [], cArray = [];
+let vBufferData = [], cBufferData = [];
+let vFeedbackData = [], cFeedback = [];
 let vBuffer, cBuffer, tBuffer;
+let vFeedback, cFeedbackBuffer;
+
 //
 // GLOBAL OPENGL OBJECTS
 //
 let canvas;
 let gl;
 let shader;
+
 //
-// GLOBAL VARIABLES FOR MOUSE TRACKING
+// GLOBAL TIMER
 //
-let prevClientX;
-let prevClientY;
-let now;
-let then;
-let frametime = 0;
-let counter = 0;
-let fps = 0;
+let now, then;
+
+
 /** INITIALIZE WEBGL **/
 window.onload = () =>
 {
@@ -33,8 +33,10 @@ window.onload = () =>
     if( gl === null ) {
         alert( 'error: Unable to initialize WebGL! Your browser or device may not be supported.' );
         return null;
-
     }
+
+    // RESIZE CANVAS
+    fullscreen();
 
     // SET COLOR_BUFFER_BIT
     gl.clearColor( 0.8,0.8,0.8,0.95 );
@@ -51,15 +53,11 @@ window.onload = () =>
     gl.useProgram( shader.program );
     gl.depthFunc( gl.LEQUAL );
 
-    // CREATE OPENGL BUFFERS
-    vBuffer = gl.createBuffer( );
-    cBuffer = gl.createBuffer( );
-
     // SET TIME
-    then = Date.now() / 1000;
+    now = then = performance.now() / 1000;
 
-    // PUSH BUFFERS TO GPU
-    updateBuffers( );
+    // CREATE OPENGL BUFFERS
+    initBuffers();
 
     // RENDER LOOP
     render();
@@ -71,19 +69,78 @@ window.onload = () =>
 function render( ) {
     // CLEAR CANVAS
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-    // DRAW SCENE
-    gl.drawArrays( gl.POINTS, 0, vertices );
     // UPDATE BUFFERS
     renderTime();
+
+    gl.bindBufferBase( gl.TRANSFORM_FEEDBACK_BUFFER, 0, vFeedback );
+    gl.beginTransformFeedback( gl.POINTS );
+
+    gl.drawArrays( gl.POINTS, 0, vertices );
+
+    gl.endTransformFeedback();
+    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+
+    // getBufferContents(vBuffer);
+    // getBufferContents(vFeedback);
+
     requestAnimFrame( render );
 }
 
+//-- BIG SHOUT OUT TO MR ANDREW ADAMSON REALLY HELPED ME TO GRASP HOW TO WEBGL --//
+// !!!! https://www.youtube.com/watch?v=ro4bDXcISms !!!!
+const getBufferContents = (buffer) => {
+    // Consider this `sync` object as a flag. It will be dropped
+    // into WebGL's instruction pipeline. When WebGL reaches
+    // this sync object, it will set its status two one of FOUR
+    // values.
+    const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+    const checkStatus = () => {
+        // Get the status
+        const status = gl.clientWaitSync(sync, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
+
+        if (status === gl.TIMEOUT_EXPIRED) {
+            console.log('GPU is still busy. Let\'s wait some more.');
+            setTimeout(checkStatus);
+        } else if (status === gl.WAIT_FAILED) {
+            console.error('Something bad happened and we won\'t get any response.');
+        } else  {
+            // This code will be reached if the status is either
+            // CONDITION_SATISFIED or SIGNALED_ALREADY. We don't
+            // really care which status it is as long as one of
+            // these was found. So we can safely read the buffer data
+            // (assuming another draw call hasn't initiated more
+            // changes....)
+            const view = new Float32Array(vertices*3);
+            gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, buffer);
+            gl.getBufferSubData(gl.TRANSFORM_FEEDBACK_BUFFER, 0, view);
+            gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, null);
+            console.log(view);
+        }
+    };
+
+    setTimeout(checkStatus);
+};
+
 //
-// STES TIME DELTA BETWEEN CURRENT LAST AND CURRENT FRAME
+// UPDATES UNIFORMS AND HANDLES FEEDBACK
 //
+function update( ){
+
+}
+
+//
+// SETS TIME DELTA BETWEEN CURRENT LAST AND CURRENT FRAME
+//
+let frametime = 0,
+    fps = 0,
+    counter = 0;
 function renderTime(){
 
-    now = Date.now() / 1000;
+    now = performance.now() / 1000;
+
+    // SAME AS getuniform1f BUT DESIGNED TO BE CALLED FREQUENTLY
+    gl.vertexAttrib1f( shader.pointers.time, now );
 
     frametime = now - then;
     fps =  1 / frametime;
@@ -95,8 +152,6 @@ function renderTime(){
         counter = 0;
     }
 
-    updateFrametime();
-
 }
 
 //
@@ -104,7 +159,7 @@ function renderTime(){
 // DRAWS NEW VERTEX AT MOUSE POSITION WHILE HOLDING LMB
 //
 let mouseDown = false;
-window.addEventListener('mousedown', (e) => {
+window.addEventListener('mousedown', e => {
     if ( e.button === 0 && e.target === canvas ) { // LMB
         mouseDown = true;
         const ndc = getNormalDeviceCoords( e );
@@ -112,21 +167,36 @@ window.addEventListener('mousedown', (e) => {
         updateBuffers();
     }
 });
-window.addEventListener('mousemove', (e) => {
+window.addEventListener('mousemove', e => {
     if ( mouseDown && e.target === canvas ) {
         const ndc = getNormalDeviceCoords( e );
         addXYZVertex( [ndc.x, ndc.y, 0] );
         updateBuffers();
     }
 });
-window.addEventListener('mouseup', (e) => {
+window.addEventListener('mouseup', e => {
     if ( e.button === 0 ) { // LMB
         mouseDown = false;
     }
 });
-///
-///
-///
+
+window.addEventListener('resize', () => {
+    fullscreen();
+})
+//
+// SET CANVAS SIZE
+//
+function resize( w,h ) {
+    canvas.width  = w;
+    canvas.height = h;
+    gl.viewport( 0, 0, w, h );
+}
+//
+// FITS CANVAS TO VIEWPORT
+//
+function fullscreen( ) {
+    resize( window.innerWidth, window.innerHeight )
+}
 
 //
 // ACCEPTS GL CONTEXT
@@ -142,6 +212,9 @@ function initShader( vshadersource, fshadersource ) {
     // ATTACH COMPILED SHADERS AND LINK TO CONTEXT
     gl.attachShader( shader, vshader );
     gl.attachShader( shader, fshader );
+    // SPECIFY FEEDBACK VARIABLES THIS CALL HAS TO HAPPEN BEFORE LINKING PROGRAM
+    // YOU COULD CALL THIS AT SOME OTHER POINT BUT YOU WOULD HAVE TO RELINK THE PROGRAM
+    gl.transformFeedbackVaryings( shader,["position_feedback"], gl.SEPARATE_ATTRIBS);
     gl.linkProgram( shader );
     // ERROR HANDLING
     if ( !gl.getProgramParameter(shader,gl.LINK_STATUS) ) {
@@ -162,10 +235,10 @@ function initShader( vshadersource, fshadersource ) {
     return {
         program: shader,
         pointers: {
-            vpos: gl.getAttribLocation( shader, 'a_vertex_position' ),
-            vcol: gl.getAttribLocation( shader, 'a_vertex_color' ),
+            apos: gl.getAttribLocation( shader, 'a_vertex_position' ),
+            acol: gl.getAttribLocation( shader, 'a_vertex_color' ),
             size: gl.getUniformLocation( shader, 'u_point_size' ),
-            time: gl.getUniformLocation( shader, 'u_time' ),
+            time: gl.getUniformLocation( shader, 'u_time' )
         }
     };
 }
@@ -194,55 +267,70 @@ function compileShader( type, code ) {
     return shader;
 }
 
+function initBuffers() {
+
+    gl.uniform1f( shader.pointers.size, pointsize );
+    gl.uniform1f( shader.pointers.time, now );
+
+    {
+        // CREATE BUFFER
+        vBuffer = gl.createBuffer( );
+        // SELECT WHICH BUFFER TO USE
+        gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
+        // FILL BOUND BUFFER WITH DATA
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STATIC_DRAW );
+        // SPECIFY DATA LAYOUT
+        gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
+        // "CONNECT" ATTRIBUTE AND BUFFER
+        gl.enableVertexAttribArray( shader.pointers.apos );
+    }
+
+    gl.bindBuffer( gl.ARRAY_BUFFER, null);
+
+    {
+        // CREATE BUFFER
+        cBuffer = gl.createBuffer();
+        // SELECT WHICH BUFFER TO USE
+        gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
+        // FILL WITH DATA
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
+        // SPECIFY DATA LAYOUT
+        gl.vertexAttribPointer(shader.pointers.acol,4,gl.FLOAT,false,0, 0);
+        // ENABLE ATTRIBUTE
+        gl.enableVertexAttribArray(shader.pointers.acol);
+    }
+
+    gl.bindBuffer( gl.ARRAY_BUFFER, null);
+
+    {
+        // CREATE BUFFER
+        vFeedback = gl.createBuffer( );
+        // SELECT BUFFER
+        gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
+        // FILL WITH DATA
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STATIC_DRAW );
+    }
+
+    gl.bindBuffer( gl.ARRAY_BUFFER, null);
+
+
+}
 //
 // PUSHES BUFFERS TO WEBGL
 //
 function updateBuffers( ) {
 
-    //
-    //   UNIFOMRS
-    //
-    {
-        updatePointSize( );
-        updateFrametime( );
-    }
-    //
-    // ATTRIBUTES
-    //
-    {
-
-        // SELECT BUFFER
         gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-        gl.enableVertexAttribArray( shader.pointers.vpos );
-        // FILL THE LAST BOUND BUFFER WITH DATA
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vArray), gl.STATIC_DRAW );
-        // SPECIFY THE DATA LAYOUT OF THE LAST BOUND BUFFER
-        gl.vertexAttribPointer(
-            shader.pointers.vpos,
-            3,
-            gl.FLOAT,
-            false,
-            0,
-            0
-        )
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STATIC_DRAW );
 
         gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
-        gl.enableVertexAttribArray( shader.pointers.vcol );
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cArray), gl.STATIC_DRAW );
-        gl.vertexAttribPointer(
-            shader.pointers.vcol,
-            4,
-            gl.FLOAT,
-            false,
-            0,
-            0
-        )
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
+        // gl.bufferSubData( gl.ARRAY_BUFFER, vertices, new Float32Array(cBufferData),0 , cBufferData.length );
+        gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STATIC_DRAW );
 
-        // gl.vertexAttrib1f()
-        //
-        // gl.bindBuffer( gl.ARRAY_BUFFER, tBuffer );
-        // gl.bufferData( (gl.ARRAY_BUFFER, new Float32Array(tArray), gl))
-    }
+        gl.bindBuffer( gl.ARRAY_BUFFER, null);
+
 }
 //
 // RETURNS NORMAL DEVICE COORDINATES NDC FOR OPENGL CANVAS
@@ -259,8 +347,9 @@ function getNormalDeviceCoords( e ) {
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
 function addVertex( xyz, rgba ){
-    vArray.push(xyz[0],xyz[1],xyz[2]);
-    cArray.push(rgba[0],rgba[1],rgba[2],rgba[3]);
+    vBufferData.push(xyz[0],xyz[1],xyz[2]);
+    cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
+    vFeedbackData.push(xyz[0],xyz[1],xyz[2]);
     vertices += 1;
 }
 
@@ -289,9 +378,3 @@ function updatePointSize( ){
     gl.uniform1f( shader.pointers.size, pointsize );
 }
 
-//
-// SETS UNIFORM FRAMETIME INSIDE SHADER
-//
-function updateFrametime( ){
-    gl.uniform1f( shader.pointers.time, frametime );
-}

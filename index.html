@@ -7,7 +7,7 @@
     <script type="text/javascript" src="./webgl-utils.js"></script>
 
     <script id="vshader" type="x-shader/x-vertex" >
-
+        precision mediump float;
         uniform float u_time;
         uniform float u_point_size;
 
@@ -16,15 +16,16 @@
 //         attribute uint a_time_to_live; // TODO
         // attribute uint a_time_init; // TODO
 
+        varying vec3 position_feedback;
         varying vec4 frag_color;
        // varying float frag_ttl; // TODO
 
         void main()
         {
+            position_feedback = vec3(a_vertex_position.x+0.01,a_vertex_position.y,a_vertex_position.z);
             frag_color = a_vertex_color;
             gl_PointSize = u_point_size;
-            vec3 pos = a_vertex_position + vec3(5.0, 5.0, 0.0) * u_time;
-            gl_Position = vec4(pos, 1.0);
+            gl_Position = vec4(a_vertex_position, 1.0);
         }
 
     </script>
@@ -40,7 +41,10 @@
     </script>
 </head>
 <body>
-<canvas id="canvas" width="800px" height="800px"> Browser or device unsupported </canvas>
+<style>#canvas{
+    overflow: hidden;
+}</style>
+<canvas id="canvas" width="0px" height="0px" > Browser or device unsupported </canvas>
 <label id="frametime">frametime:</label>
 <label id="fps">fps:</label>
 
