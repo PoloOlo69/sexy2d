@@ -22,11 +22,11 @@
 
         void main()
         {
-
-            position_feedback = vec3(a_vertex_position.x+0.01,a_vertex_position.y,a_vertex_position.z);
-            frag_color = a_vertex_color;
-            gl_PointSize = u_point_size;
+            vec3 m = vec3( a_vertex_position.xyz + 0.01 * u_time);
             gl_Position = vec4(a_vertex_position, 1.0);
+            position_feedback = vec3( a_vertex_position.xyz + 0.01 * u_time);
+            frag_color = a_vertex_color;
+            gl_PointSize = (1.0+a_vertex_position.x) * (1.0+a_vertex_position.y) * 10.0;
         }
 
     </script>
