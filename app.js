@@ -76,7 +76,7 @@ function render( ) {
     gl.bindBufferBase( gl.TRANSFORM_FEEDBACK_BUFFER, 0, fb );
     gl.bindBuffer( gl.ARRAY_BUFFER, vao );
 
-    gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
+    gl.vertexAttribPointer( shader.pointers.apos,2, gl.FLOAT, false, 0, 0) ;
     gl.enableVertexAttribArray( shader.pointers.apos );
     gl.beginTransformFeedback( gl.POINTS );
     gl.drawArrays( gl.POINTS, 0, vertices );
@@ -138,14 +138,14 @@ window.addEventListener('mousedown', e => {
     if ( e.button === 0 && e.target === canvas ) { // LMB
         mouseDown = true;
         const ndc = getNormalDeviceCoords( e );
-        addXYZVertex( [ndc.x, ndc.y, 0]);
+        addXYVertex( [ndc.x, ndc.y, 0]);
         updateBuffers();
     }
 });
 window.addEventListener('mousemove', e => {
     if ( mouseDown && e.target === canvas ) {
         const ndc = getNormalDeviceCoords( e );
-        addXYZVertex( [ndc.x, ndc.y, 0] );
+        addXYVertex( [ndc.x, ndc.y] );
         updateBuffers();
     }
 });
@@ -252,7 +252,7 @@ function initBuffers() {
         // FILL BOUND BUFFER WITH DATA
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
         // SPECIFY DATA LAYOUT
-        gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
+        gl.vertexAttribPointer( shader.pointers.apos,2, gl.FLOAT, false, 0, 0) ;
         // "CONNECT" ATTRIBUTE AND BUFFER
         gl.enableVertexAttribArray( shader.pointers.apos );
     }
@@ -282,7 +282,7 @@ function initBuffers() {
         // FILL WITH DATA
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STREAM_READ );
         // "CONNECT" ATTRIBUTE AND BUFFER
-        gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
+        gl.vertexAttribPointer( shader.pointers.apos,2, gl.FLOAT, false, 0, 0) ;
         // "CONNECT" ATTRIBUTE AND BUFFER
         gl.enableVertexAttribArray( shader.pointers.apos );
     }
@@ -325,18 +325,18 @@ function getNormalDeviceCoords( e ) {
 //
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
-function addVertex( xyz, rgba ){
-    vBufferData.push(xyz[0],xyz[1],xyz[2]);
+function addVertex( xy, rgba ){
+    vBufferData.push(xy[0],xy[1]);
     cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
-    vFeedbackData.push(xyz[0],xyz[1],xyz[2]);
+    vFeedbackData.push(xy[0],xy[1]);
     vertices += 1;
 }
 
 //
 // ADDS A VERTEX AT XYZ WITH RANDOM COLOR
 //
-function addXYZVertex( xyz ) {
-    addVertex( xyz, [rand(),rand(),rand(),1.0] );
+function addXYVertex( xy ) {
+    addVertex( xy, [rand(),rand(),rand(),1.0] );
 }
 
 //
