@@ -3,10 +3,13 @@
 //
 let vertices = 0;
 let pointsize = 10;
+let instances = 6;
+let vInstanceData = [];
 let vBufferData = [], cBufferData = [];
-let vFeedbackData = [], cFeedback = [];
-let vBuffer, cBuffer, tBuffer;
-let vFeedback, cFeedbackBuffer;
+let vFeedbackData = [];
+let vInstanceBuffer;
+let vBuffer, cBuffer;
+let vFeedback;
 
 //
 // GLOBAL OPENGL OBJECTS
@@ -75,13 +78,18 @@ function render( ) {
 
     gl.bindBufferBase( gl.TRANSFORM_FEEDBACK_BUFFER, 0, fb );
     gl.bindBuffer( gl.ARRAY_BUFFER, vao );
+    gl.vertexAttribPointer( shader.pointers.apos, 2, gl.FLOAT, false, 0, 0 );
+    gl.enableVertexAttribArray( shader.pointers.apos );
+    gl.vertexAttribDivisor( shader.pointers.apos, 0 );
+    gl.vertexAttribDivisor( shader.pointers.aipo, 1 );
+    gl.vertexAttribDivisor( shader.pointers.aive, 1 );
 
-    gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
     gl.enableVertexAttribArray( shader.pointers.apos );
     gl.beginTransformFeedback( gl.POINTS );
-    gl.drawArrays( gl.POINTS, 0, vertices );
+    gl.drawArraysInstanced( gl.POINTS, 0, vertices, instances );
 
     gl.endTransformFeedback();
+
     gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
 
     if(vao===vBuffer){
@@ -130,34 +138,36 @@ function renderTime(){
 }
 
 //
-// MOUSE EVENT LISTENERS
-// DRAWS NEW VERTEX AT MOUSE POSITION WHILE HOLDING LMB
+// EVENT LISTENERS
 //
-let mouseDown = false;
-window.addEventListener('mousedown', e => {
-    if ( e.button === 0 && e.target === canvas ) { // LMB
-        mouseDown = true;
-        const ndc = getNormalDeviceCoords( e );
-        addXYZVertex( [ndc.x, ndc.y, 0]);
-        updateBuffers();
-    }
-});
-window.addEventListener('mousemove', e => {
-    if ( mouseDown && e.target === canvas ) {
-        const ndc = getNormalDeviceCoords( e );
-        addXYZVertex( [ndc.x, ndc.y, 0] );
-        updateBuffers();
-    }
-});
-window.addEventListener('mouseup', e => {
-    if ( e.button === 0 ) { // LMB
-        mouseDown = false;
-    }
-});
+{
+    let mouseDown = false;
+    window.addEventListener('mousedown', e => {
+        if ( e.button === 0 && e.target === canvas ) { // LMB
+            mouseDown = true;
+            const ndc = getNormalDeviceCoords( e );
+            addXYZVertex( [ndc.x, ndc.y]);
+            updateBuffers();
+        }
+    });
+    window.addEventListener('mousemove', e => {
+        if ( mouseDown && e.target === canvas ) {
+            const ndc = getNormalDeviceCoords( e );
+            addXYZVertex( [ndc.x, ndc.y] );
+            updateBuffers();
+        }
+    });
+    window.addEventListener('mouseup', e => {
+        if ( e.button === 0 ) { // LMB
+            mouseDown = false;
+        }
+    });
 
-window.addEventListener('resize', () => {
-    fullscreen();
-})
+    window.addEventListener('resize', () => {
+        fullscreen();
+    })
+}
+
 //
 // SET CANVAS SIZE
 //
@@ -172,6 +182,7 @@ function resize( w,h ) {
 function fullscreen( ) {
     resize( window.innerWidth, window.innerHeight )
 }
+
 
 //
 // ACCEPTS GL CONTEXT
@@ -212,6 +223,8 @@ function initShader( vshadersource, fshadersource ) {
         pointers: {
             apos: gl.getAttribLocation( shader, 'a_vertex_position' ),
             acol: gl.getAttribLocation( shader, 'a_vertex_color' ),
+            aipo: gl.getAttribLocation( shader, 'a_instance_position' ),
+            aive: gl.getAttribLocation( shader, 'a_instance_velocity' ),
             size: gl.getUniformLocation( shader, 'u_point_size' ),
             time: gl.getUniformLocation( shader, 'u_time' )
         }
@@ -244,55 +257,75 @@ function compileShader( type, code ) {
 
 function initBuffers() {
 
+    // CREATE VERTEX ARRAY BUFFER
     {
         // CREATE BUFFER
         vBuffer = gl.createBuffer( );
         // SELECT WHICH BUFFER TO USE
         gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
         // FILL BOUND BUFFER WITH DATA
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STATIC_DRAW );
         // SPECIFY DATA LAYOUT
-        gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
+        gl.vertexAttribPointer( shader.pointers.apos,2, gl.FLOAT, false, 0, 0) ;
         // "CONNECT" ATTRIBUTE AND BUFFER
         gl.enableVertexAttribArray( shader.pointers.apos );
     }
 
     gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
+    // CREATE COLOR BUFFER
     {
-        // CREATE BUFFER
-        cBuffer = gl.createBuffer();
-        // SELECT WHICH BUFFER TO USE
-        gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-        // FILL WITH DATA
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
-        // SPECIFY DATA LAYOUT
-        gl.vertexAttribPointer(shader.pointers.acol,4,gl.FLOAT,false,0, 0);
-        // ENABLE ATTRIBUTE
-        gl.enableVertexAttribArray(shader.pointers.acol);
+        cBuffer = gl.createBuffer( );
+        gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
+        gl.vertexAttribPointer( shader.pointers.acol,4,gl.FLOAT,false,0, 0 );
+        gl.enableVertexAttribArray( shader.pointers.acol );
     }
 
     gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
+    // CREATE INSTANCE BUFFER
     {
-        // CREATE BUFFER
+        initInstanceData( );
+        console.log( vInstanceData);
+        vInstanceBuffer = gl.createBuffer( );
+        gl.bindBuffer( gl.ARRAY_BUFFER, vInstanceBuffer );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vInstanceData), gl.STATIC_DRAW );
+        gl.vertexAttribPointer( shader.pointers.aipo,2, gl.FLOAT, false, 16, 0) ; // POSITION
+        gl.enableVertexAttribArray( shader.pointers.aipo );
+        gl.vertexAttribPointer( shader.pointers.aive,2, gl.FLOAT, false, 16, 8 ); // VELOCITY
+        gl.enableVertexAttribArray( shader.pointers.aive );
+    }
+
+    gl.bindBuffer( gl.ARRAY_BUFFER, null);
+
+    // CREATE POSITION FEEDBACK BUFFER
+    {
         vFeedback = gl.createBuffer( );
-        // SELECT BUFFER
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
-        // FILL WITH DATA
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STREAM_READ );
-        // "CONNECT" ATTRIBUTE AND BUFFER
-        gl.vertexAttribPointer( shader.pointers.apos,3, gl.FLOAT, false, 0, 0) ;
-        // "CONNECT" ATTRIBUTE AND BUFFER
+        gl.bufferData( gl.ARRAY_BUFFER, 4 * vertices * 2 * instances, gl.STATIC_DRAW );
+        gl.vertexAttribPointer( shader.pointers.apos,2, gl.FLOAT, false, 0, 0 );
         gl.enableVertexAttribArray( shader.pointers.apos );
     }
 
     gl.bindBuffer( gl.ARRAY_BUFFER, null);
-
 
     gl.uniform1f( shader.pointers.size, pointsize );
     gl.uniform1f( shader.pointers.time, now );
 
+}
+
+function initInstanceData( ) {
+    const alpha = (Math.PI * 2) / instances;
+    const half = [1 / Math.sqrt(2), 1 / Math.sqrt(2)];
+    for (let i = 0; i < instances; i++) {
+        let x = 0.5 * Math.cos(alpha * i);
+        let y = 0.5 * Math.sin(alpha * i);
+        x = x * half[0] - y * half[1];
+        y = x * half[1] + y * half[0];
+        vInstanceData.push(x, y, x, y);
+        vInstanceData.push(x, y, x, y);
+    }
 }
 //
 // PUSHES BUFFERS TO WEBGL
@@ -300,13 +333,13 @@ function initBuffers() {
 function updateBuffers( ) {
 
         gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STATIC_DRAW );
 
         gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
-        // gl.bufferSubData( gl.ARRAY_BUFFER, vertices, new Float32Array(cBufferData),0 , cBufferData.length );
+
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
+        gl.bufferData( gl.ARRAY_BUFFER,  new Float32Array(vFeedbackData), gl.STATIC_DRAW );
 
         gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
@@ -326,9 +359,9 @@ function getNormalDeviceCoords( e ) {
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
 function addVertex( xyz, rgba ){
-    vBufferData.push(xyz[0],xyz[1],xyz[2]);
+    vBufferData.push(xyz[0],xyz[1]);
     cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
-    vFeedbackData.push(xyz[0],xyz[1],xyz[2]);
+    vFeedbackData.push(xyz[0],xyz[1]);
     vertices += 1;
 }
 
@@ -356,4 +389,3 @@ function randi( ) {
 function updatePointSize( ){
     gl.uniform1f( shader.pointers.size, pointsize );
 }
-
