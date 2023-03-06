@@ -6,36 +6,38 @@
     <script src="app.js" type="module" defer></script>
     <script type="text/javascript" src="./webgl-utils.js"></script>
 
-    <script id="vshader" type="x-shader/x-vertex" >
+    <script id="vshader" type="x-shader/x-vertex" >#version 300 es
         precision mediump float;
         uniform float u_time;
         uniform float u_point_size;
+        uniform vec2 u_resolution;
 
-        attribute vec2 a_vertex_position;
-        attribute vec4 a_vertex_color;
+        in vec4 a_vertex_position_instance;
+        in vec4 a_vertex_color;
 //         attribute uint a_time_to_live; // TODO
         // attribute uint a_time_init; // TODO
 
-        varying vec2 position_feedback;
-        varying vec4 frag_color;
+        out vec4 position_feedback;
+        out vec4 frag_color;
        // varying float frag_ttl; // TODO
 
         void main()
         {
-            position_feedback = vec2( a_vertex_position.x, a_vertex_position.y - 0.01 * u_time);
-            gl_Position = vec4(a_vertex_position, 0.0, 1.0);
+            gl_Position = vec4(a_vertex_position_instance.xy, a_vertex_position_instance.zw);
+            gl_PointSize = (1.0+a_vertex_position_instance.x) * (1.0+a_vertex_position_instance.y) * 10.0;
+            position_feedback = vec4( a_vertex_position_instance.xy - 0.01 * u_time, a_vertex_position_instance.zw );
             frag_color = a_vertex_color;
-            gl_PointSize = (1.0+a_vertex_position.x) * (1.0+a_vertex_position.y) * 10.0;
         }
 
     </script>
 
-    <script id="fshader" type="x-shader/x-fragment" >
+    <script id="fshader" type="x-shader/x-fragment" >#version 300 es
         precision mediump float;
-        varying vec4 frag_color;
+        in vec4 frag_color;
+        out vec4 FragColor;
         void main()
         {
-            gl_FragColor = frag_color;
+            FragColor = frag_color;
         }
 
     </script>

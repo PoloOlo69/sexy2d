@@ -35,9 +35,6 @@ window.onload = () =>
         return null;
     }
 
-    // RESIZE CANVAS
-    fullscreen();
-
     // SET COLOR_BUFFER_BIT
     gl.clearColor( 0.8,0.8,0.8,0.95 );
 
@@ -58,8 +55,10 @@ window.onload = () =>
 
     // CREATE OPENGL BUFFERS
     initBuffers();
-    fb = vFeedback;
-    vao = vBuffer;
+
+    // RESIZE CANVAS
+    fullscreen();
+
     // RENDER LOOP
     render();
 }
@@ -76,7 +75,7 @@ function render( ) {
     gl.bindBufferBase( gl.TRANSFORM_FEEDBACK_BUFFER, 0, fb );
     gl.bindBuffer( gl.ARRAY_BUFFER, vao );
 
-    gl.vertexAttribPointer( shader.pointers.apos,2, gl.FLOAT, false, 0, 0) ;
+    gl.vertexAttribPointer( shader.pointers.apos,4, gl.FLOAT, false, 0, 0) ;
     gl.enableVertexAttribArray( shader.pointers.apos );
     gl.beginTransformFeedback( gl.POINTS );
     gl.drawArrays( gl.POINTS, 0, vertices );
@@ -210,10 +209,11 @@ function initShader( vshadersource, fshadersource ) {
     return {
         program: shader,
         pointers: {
-            apos: gl.getAttribLocation( shader, 'a_vertex_position' ),
+            apos: gl.getAttribLocation( shader, 'a_vertex_position_instance' ),
             acol: gl.getAttribLocation( shader, 'a_vertex_color' ),
             size: gl.getUniformLocation( shader, 'u_point_size' ),
-            time: gl.getUniformLocation( shader, 'u_time' )
+            time: gl.getUniformLocation( shader, 'u_time' ),
+            ures: gl.getUniformLocation( shader, 'u_resolution' )
         }
     };
 }
@@ -252,7 +252,7 @@ function initBuffers() {
         // FILL BOUND BUFFER WITH DATA
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
         // SPECIFY DATA LAYOUT
-        gl.vertexAttribPointer( shader.pointers.apos,2, gl.FLOAT, false, 0, 0) ;
+        gl.vertexAttribPointer( shader.pointers.apos,4, gl.FLOAT, false, 0, 0) ;
         // "CONNECT" ATTRIBUTE AND BUFFER
         gl.enableVertexAttribArray( shader.pointers.apos );
     }
@@ -282,16 +282,19 @@ function initBuffers() {
         // FILL WITH DATA
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STREAM_READ );
         // "CONNECT" ATTRIBUTE AND BUFFER
-        gl.vertexAttribPointer( shader.pointers.apos,2, gl.FLOAT, false, 0, 0) ;
+        gl.vertexAttribPointer( shader.pointers.apos,4, gl.FLOAT, false, 0, 0) ;
         // "CONNECT" ATTRIBUTE AND BUFFER
         gl.enableVertexAttribArray( shader.pointers.apos );
     }
 
     gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
-
     gl.uniform1f( shader.pointers.size, pointsize );
     gl.uniform1f( shader.pointers.time, now );
+    gl.uniform2fv( shader.pointers.ures, [canvas.width, canvas.height] );
+
+    fb = vFeedback;
+    vao = vBuffer;
 
 }
 //
@@ -300,13 +303,13 @@ function initBuffers() {
 function updateBuffers( ) {
 
         gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.DYNAMIC_DRAW );
 
         gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
         // gl.bufferSubData( gl.ARRAY_BUFFER, vertices, new Float32Array(cBufferData),0 , cBufferData.length );
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.DYNAMIC_DRAW );
 
         gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
@@ -326,9 +329,9 @@ function getNormalDeviceCoords( e ) {
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
 function addVertex( xy, rgba ){
-    vBufferData.push(xy[0],xy[1]);
+    vBufferData.push(xy[0],xy[1], 0.0, 1.0);
     cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
-    vFeedbackData.push(xy[0],xy[1]);
+    vFeedbackData.push(xy[0],xy[1], 0.0, 1.0);
     vertices += 1;
 }
 
