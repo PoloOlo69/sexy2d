@@ -12,20 +12,20 @@
         uniform float u_point_size;
         uniform vec2 u_resolution;
 
-        in vec4 a_vertex_position_instance;
+        in vec4 a_vertex_position_velocity;
         in vec4 a_vertex_color;
-//         attribute uint a_time_to_live; // TODO
-        // attribute uint a_time_init; // TODO
 
         out vec4 position_feedback;
         out vec4 frag_color;
-       // varying float frag_ttl; // TODO
 
         void main()
         {
-            gl_Position = vec4(a_vertex_position_instance.xy, a_vertex_position_instance.zw);
-            gl_PointSize = (1.0+a_vertex_position_instance.x) * (1.0+a_vertex_position_instance.y) * 10.0;
-            position_feedback = vec4( a_vertex_position_instance.xy - 0.01 * u_time, a_vertex_position_instance.zw );
+            gl_Position = vec4(a_vertex_position_velocity.xy,0,1);
+            vec2 velocity = a_vertex_position_velocity.zw; // add a constant speed
+            velocity += vec2(0.0, -0.1 * u_time); // apply gravity
+            vec2 position = a_vertex_position_velocity.xy + velocity * u_time;
+            position_feedback = vec4(position, velocity);
+            gl_PointSize =  10.0;
             frag_color = a_vertex_color;
         }
 

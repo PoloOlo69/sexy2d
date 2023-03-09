@@ -209,7 +209,7 @@ function initShader( vshadersource, fshadersource ) {
     return {
         program: shader,
         pointers: {
-            apos: gl.getAttribLocation( shader, 'a_vertex_position_instance' ),
+            apos: gl.getAttribLocation( shader, 'a_vertex_position_velocity' ),
             acol: gl.getAttribLocation( shader, 'a_vertex_color' ),
             size: gl.getUniformLocation( shader, 'u_point_size' ),
             time: gl.getUniformLocation( shader, 'u_time' ),
@@ -293,8 +293,8 @@ function initBuffers() {
     gl.uniform1f( shader.pointers.time, now );
     gl.uniform2fv( shader.pointers.ures, [canvas.width, canvas.height] );
 
-    fb = vFeedback;
     vao = vBuffer;
+    fb = vFeedback;
 
 }
 //
@@ -309,8 +309,10 @@ function updateBuffers( ) {
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
         // gl.bufferSubData( gl.ARRAY_BUFFER, vertices, new Float32Array(cBufferData),0 , cBufferData.length );
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.DYNAMIC_DRAW );
+        gl.bufferData( gl.ARRAY_BUFFER, 16*vertices, gl.DYNAMIC_DRAW );
 
+    vao = vBuffer;
+    fb = vFeedback;
         gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
 }
@@ -329,10 +331,15 @@ function getNormalDeviceCoords( e ) {
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
 function addVertex( xy, rgba ){
-    vBufferData.push(xy[0],xy[1], 0.0, 1.0);
+    vBufferData.push(xy[0]+0.05,xy[1]+0.05, +0.05,+0.05);
+    vBufferData.push(xy[0]+0.05,xy[1]-0.05, +0.05,-0.05);
+    vBufferData.push(xy[0]-0.05,xy[1]+0.05, -0.05,+0.05);
+    vBufferData.push(xy[0]-0.05,xy[1]-0.05, -0.05,-0.05);
     cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
-    vFeedbackData.push(xy[0],xy[1], 0.0, 1.0);
-    vertices += 1;
+    cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
+    cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
+    cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
+    vertices += 4;
 }
 
 //
