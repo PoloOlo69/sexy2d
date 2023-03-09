@@ -142,7 +142,22 @@ window.addEventListener('mousedown', e => {
         updateBuffers();
     }
 });
+window.addEventListener('touchstart', e => {
+    if ( e.button === 0 && e.target === canvas ) { // LMB
+        mouseDown = true;
+        const ndc = getNormalDeviceCoords( e );
+        addXYVertex( [ndc.x, ndc.y, 0]);
+        updateBuffers();
+    }
+});
 window.addEventListener('mousemove', e => {
+    if ( mouseDown && e.target === canvas ) {
+        const ndc = getNormalDeviceCoords( e );
+        addXYVertex( [ndc.x, ndc.y] );
+        updateBuffers();
+    }
+});
+window.addEventListener('touchmove', e => {
     if ( mouseDown && e.target === canvas ) {
         const ndc = getNormalDeviceCoords( e );
         addXYVertex( [ndc.x, ndc.y] );
@@ -154,7 +169,11 @@ window.addEventListener('mouseup', e => {
         mouseDown = false;
     }
 });
-
+window.addEventListener('touchend', e => {
+    if ( e.button === 0 ) { // LMB
+        mouseDown = false;
+    }
+});
 window.addEventListener('resize', () => {
     fullscreen();
 })
