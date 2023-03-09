@@ -3,11 +3,12 @@
 //
 let vertices = 0;
 let pointsize = 10;
-let vBufferData = [], cBufferData = [];
-let vFeedbackData = [], cFeedback = [];
-let vBuffer, cBuffer, tBuffer;
-let vFeedback, cFeedbackBuffer;
-
+let vBufferData = [],
+    cBufferData = [],
+    vFeedbackData = [];
+let vBuffer,
+    cBuffer,
+    vFeedback;
 //
 // GLOBAL OPENGL OBJECTS
 //
@@ -59,6 +60,13 @@ window.onload = () =>
     // RESIZE CANVAS
     fullscreen();
 
+    addVertex([0,0], [1.0,0.2,0.5,1.0]);
+    addVertex([0.55,0.55], [1.0,0.2,0.5,1.0]);
+    addVertex([0.55,-0.55], [1.0,0.2,0.5,1.0]);
+    addVertex([-0.55,0.55], [1.0,0.2,0.5,1.0]);
+    addVertex([-0.55,-0.55], [1.0,0.2,0.5,1.0]);
+
+    updateBuffers();
     // RENDER LOOP
     render();
 }
@@ -94,16 +102,6 @@ function render( ) {
         fb = vFeedback;
     }
     requestAnimFrame( render );
-}
-
-//-- BIG SHOUT OUT TO MR ANDREW ADAMSON REALLY HELPED ME TO GRASP HOW TO WEBGL --//
-// !!!! https://www.youtube.com/watch?v=ro4bDXcISms !!!!
-
-//
-// UPDATES UNIFORMS AND HANDLES FEEDBACK
-//
-function update( ){
-
 }
 
 //
@@ -253,7 +251,7 @@ function initBuffers() {
         // SELECT WHICH BUFFER TO USE
         gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
         // FILL BOUND BUFFER WITH DATA
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STREAM_READ );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STATIC_DRAW );
         // SPECIFY DATA LAYOUT
         gl.vertexAttribPointer( shader.pointers.apos,4, gl.FLOAT, false, 0, 0) ;
         // "CONNECT" ATTRIBUTE AND BUFFER
@@ -283,7 +281,7 @@ function initBuffers() {
         // SELECT BUFFER
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
         // FILL WITH DATA
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STREAM_READ );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STATIC_DRAW );
         // "CONNECT" ATTRIBUTE AND BUFFER
         gl.vertexAttribPointer( shader.pointers.apos,4, gl.FLOAT, false, 0, 0) ;
         // "CONNECT" ATTRIBUTE AND BUFFER
@@ -310,9 +308,9 @@ function updateBuffers( ) {
 
         gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
-        // gl.bufferSubData( gl.ARRAY_BUFFER, vertices, new Float32Array(cBufferData),0 , cBufferData.length );
+
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
-        gl.bufferData( gl.ARRAY_BUFFER, 16*vertices, gl.STATIC_DRAW );
+        gl.bufferData( gl.ARRAY_BUFFER, 4*4*vertices, gl.STATIC_DRAW );
 
     vao = vBuffer;
     fb = vFeedback;
@@ -334,11 +332,11 @@ const velocity = 0.1;
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
 function addVertex( xy, rgba ){
-    const x = 20;
+    const x = 6;
     for (let i = 0; i < x; i++) {
-        const angle = (i / x) * Math.PI * 2;
-        const vx = Math.cos(angle) * velocity;
-        const vy = Math.sin(angle) * velocity;
+        const alpha = (i / x) * Math.PI * 2;
+        const vx = Math.cos(alpha) * velocity;
+        const vy = Math.sin(alpha) * velocity;
         console.log(vx, vy);
         vBufferData.push(xy[0], xy[1], vx, vy);
         cBufferData.push(rgba[0], rgba[1], rgba[2], rgba[3]);
@@ -359,15 +357,3 @@ function addXYVertex( xy ) {
 function rand( ) {
     return Math.random( );
 }
-
-//
-// Random Number [-1,1]
-//
-function randi( ) {
-    return Math.random( ) * 2 - 1;
-}
-
-function updatePointSize( ){
-    gl.uniform1f( shader.pointers.size, pointsize );
-}
-

@@ -7,7 +7,6 @@
     <script type="text/javascript" src="./webgl-utils.js"></script>
 
     <script id="vshader" type="x-shader/x-vertex" >#version 300 es
-    precision mediump float;
     uniform float u_time;
     uniform float u_point_size;
     uniform vec2 u_resolution;
@@ -25,7 +24,7 @@
     {
         gl_Position = vec4(a_vertex_position_velocity.xy, 0, 1);
         vec2 velocity = a_vertex_position_velocity.zw;// add a constant speed
-        //velocity += vec2(0.0, -0.981 * u_time); // apply gravity
+        // velocity += vec2(0.0, -0.981 * u_time); // apply gravity
         vec2 position = advanced_euclid(a_vertex_position_velocity.xy + velocity * u_time, u_resolution);
         position_feedback = vec4(position, velocity);
         gl_PointSize =  10.0;
@@ -45,9 +44,10 @@
 
     </script>
 </head>
-<body>
+<body style="overflow: hidden; margin: 0px; padding: 0px;">
 <style>#canvas{
-    overflow: hidden;
+    position: absolute;
+    z-index: -1;
 }</style>
 <canvas id="canvas" width="0px" height="0px" > Browser or device unsupported </canvas>
 <label id="frametime">frametime:</label>
