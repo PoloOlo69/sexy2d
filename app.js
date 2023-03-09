@@ -327,7 +327,7 @@ function getNormalDeviceCoords( e ) {
         y: (rect.bottom - e.clientY) / canvas.height * 2 - 1
     };
 }
-const velocity = 0.1;
+const velocity = 0.1 ;
 //
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
@@ -337,7 +337,6 @@ function addVertex( xy, rgba ){
         const alpha = (i / x) * Math.PI * 2;
         const vx = Math.cos(alpha) * velocity;
         const vy = Math.sin(alpha) * velocity;
-        console.log(vx, vy);
         vBufferData.push(xy[0], xy[1], vx, vy);
         cBufferData.push(rgba[0], rgba[1], rgba[2], rgba[3]);
     }
