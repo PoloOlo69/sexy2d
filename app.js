@@ -77,11 +77,14 @@ function render( ) {
 
     gl.vertexAttribPointer( shader.pointers.apos,4, gl.FLOAT, false, 0, 0) ;
     gl.enableVertexAttribArray( shader.pointers.apos );
+
     gl.beginTransformFeedback( gl.POINTS );
     gl.drawArrays( gl.POINTS, 0, vertices );
 
     gl.endTransformFeedback();
+
     gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
+    gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
     if(vao===vBuffer){
         vao = vFeedback;
@@ -303,13 +306,13 @@ function initBuffers() {
 function updateBuffers( ) {
 
         gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.DYNAMIC_DRAW );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vBufferData), gl.STATIC_DRAW );
 
         gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
         // gl.bufferSubData( gl.ARRAY_BUFFER, vertices, new Float32Array(cBufferData),0 , cBufferData.length );
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
-        gl.bufferData( gl.ARRAY_BUFFER, 16*vertices, gl.DYNAMIC_DRAW );
+        gl.bufferData( gl.ARRAY_BUFFER, 16*vertices, gl.STATIC_DRAW );
 
     vao = vBuffer;
     fb = vFeedback;
@@ -325,21 +328,22 @@ function getNormalDeviceCoords( e ) {
         x: (e.clientX - rect.left) / canvas.width * 2 - 1,
         y: (rect.bottom - e.clientY) / canvas.height * 2 - 1
     };
-    }
-
+}
+const velocity = 0.1;
 //
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
 function addVertex( xy, rgba ){
-    vBufferData.push(xy[0]+0.05,xy[1]+0.05, +0.05,+0.05);
-    vBufferData.push(xy[0]+0.05,xy[1]-0.05, +0.05,-0.05);
-    vBufferData.push(xy[0]-0.05,xy[1]+0.05, -0.05,+0.05);
-    vBufferData.push(xy[0]-0.05,xy[1]-0.05, -0.05,-0.05);
-    cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
-    cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
-    cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
-    cBufferData.push(rgba[0],rgba[1],rgba[2],rgba[3]);
-    vertices += 4;
+    const x = 20;
+    for (let i = 0; i < x; i++) {
+        const angle = (i / x) * Math.PI * 2;
+        const vx = Math.cos(angle) * velocity;
+        const vy = Math.sin(angle) * velocity;
+        console.log(vx, vy);
+        vBufferData.push(xy[0], xy[1], vx, vy);
+        cBufferData.push(rgba[0], rgba[1], rgba[2], rgba[3]);
+    }
+    vertices += x;
 }
 
 //
