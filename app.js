@@ -21,17 +21,16 @@ let shader;
 //
 let now, then;
 
-
 /** INITIALIZE WEBGL **/
 window.onload = () =>
 {
 
-    // OBTAIN CANVAS
+    // SETUP CANVAS
     canvas = document.querySelector( '#canvas' );
 
-    // ERROR HANDLING
+    // SETUP GL CONTEXT
     gl = canvas.getContext( 'webgl2' );
-    if( gl === null ) {
+    if( !gl ) {
         alert( 'error: Unable to initialize WebGL! Your browser or device may not be supported.' );
         return null;
     }
@@ -46,7 +45,7 @@ window.onload = () =>
     const vshadersource = document.querySelector( '#vshader' ).textContent;
     const fshadersource = document.querySelector( '#fshader' ).textContent;
 
-    // CREATE SHADER AND USE SHADER PROGRAM
+    // SETUP SHADER SHADER PROGRAM
     shader = initShader( vshadersource, fshadersource );
     gl.useProgram( shader.program );
     gl.depthFunc( gl.LEQUAL );
@@ -54,23 +53,22 @@ window.onload = () =>
     // SET TIME
     now = then = performance.now() / 1000;
 
-    // CREATE OPENGL BUFFERS
-    initBuffers();
-
-    // RESIZE CANVAS
-    fullscreen();
-
+    // SETUP OPENGL BUFFERS
+    setupBuffers();
     addVertex([0,0], [1.0,0.2,0.5,1.0]);
     addVertex([0.55,0.55], [1.0,0.2,0.5,1.0]);
     addVertex([0.55,-0.55], [1.0,0.2,0.5,1.0]);
     addVertex([-0.55,0.55], [1.0,0.2,0.5,1.0]);
     addVertex([-0.55,-0.55], [1.0,0.2,0.5,1.0]);
-
     updateBuffers();
-    // RENDER LOOP
+
+    // FIT TO VIEWPORT
+    resize( );
+
+    // MAIN RENDER LOOP
     render();
 }
-let fb, vao;
+let fbo, vao;
 //
 // MAIN RENDER LOOP
 //
@@ -80,7 +78,7 @@ function render( ) {
     // UPDATE BUFFERS
     renderTime();
 
-    gl.bindBufferBase( gl.TRANSFORM_FEEDBACK_BUFFER, 0, fb );
+    gl.bindBufferBase( gl.TRANSFORM_FEEDBACK_BUFFER, 0, fbo );
     gl.bindBuffer( gl.ARRAY_BUFFER, vao );
 
     gl.vertexAttribPointer( shader.pointers.apos,4, gl.FLOAT, false, 0, 0) ;
@@ -88,19 +86,14 @@ function render( ) {
 
     gl.beginTransformFeedback( gl.POINTS );
     gl.drawArrays( gl.POINTS, 0, vertices );
-
     gl.endTransformFeedback();
 
     gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
     gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
-    if(vao===vBuffer){
-        vao = vFeedback;
-        fb = vBuffer;
-    } else {
-        vao = vBuffer;
-        fb = vFeedback;
-    }
+    vao===vBuffer?   vao = vFeedback : vao = vBuffer;
+    fbo===vFeedback? fbo = vBuffer   : fbo = vFeedback;
+
     requestAnimFrame( render );
 }
 
@@ -130,9 +123,9 @@ function renderTime(){
 }
 
 //
-// MOUSE EVENT LISTENERS
-// DRAWS NEW VERTEX AT MOUSE POSITION WHILE HOLDING LMB
+// EVENT LISTENERS
 //
+
 let mouseDown = false;
 window.addEventListener('mousedown', e => {
     if ( e.button === 0 && e.target === canvas ) { // LMB
@@ -175,21 +168,19 @@ window.addEventListener('touchend', e => {
     }
 });
 window.addEventListener('resize', () => {
-    fullscreen();
-})
+    resize( );
+});
+
 //
-// SET CANVAS SIZE
+// RESIZES CANVAS TO PREFERRED SIZE
+// FILLS VIEWPORT IF UNDEFINED ARGS
 //
 function resize( w,h ) {
-    canvas.width  = w;
-    canvas.height = h;
-    gl.viewport( 0, 0, w, h );
-}
-//
-// FITS CANVAS TO VIEWPORT
-//
-function fullscreen( ) {
-    resize( window.innerWidth, window.innerHeight )
+    canvas.width  = w
+        ?? window.innerWidth;
+    canvas.height = h
+        ?? window.innerHeight;
+    gl.viewport( 0, 0, canvas.width, canvas.height );
 }
 
 //
@@ -198,11 +189,11 @@ function fullscreen( ) {
 //
 function initShader( vshadersource, fshadersource ) {
 
+    // CREATE WEBGL SHADER PROGRAM
+    const shader = gl.createProgram();
     // COMPILE THE SOURCE CODE
     const vshader = compileShader( gl.VERTEX_SHADER, vshadersource );
     const fshader = compileShader( gl.FRAGMENT_SHADER, fshadersource );
-    // CREATE WEBGL SHADER PROGRAM
-    const shader = gl.createProgram();
     // ATTACH COMPILED SHADERS AND LINK TO CONTEXT
     gl.attachShader( shader, vshader );
     gl.attachShader( shader, fshader );
@@ -220,6 +211,7 @@ function initShader( vshadersource, fshadersource ) {
     if( !gl.getProgramParameter(shader,gl.VALIDATE_STATUS) ) {
         alert( 'error: invalid shader' );
     }
+
     // RELEASE RESOURCES
     gl.detachShader( shader, vshader );
     gl.detachShader( shader, fshader );
@@ -262,7 +254,7 @@ function compileShader( type, code ) {
     return shader;
 }
 
-function initBuffers() {
+function setupBuffers() {
 
     {
         // CREATE BUFFER
@@ -314,7 +306,7 @@ function initBuffers() {
     gl.uniform2fv( shader.pointers.ures, [canvas.width, canvas.height] );
 
     vao = vBuffer;
-    fb = vFeedback;
+    fbo = vFeedback;
 
 }
 //
@@ -331,11 +323,12 @@ function updateBuffers( ) {
         gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
         gl.bufferData( gl.ARRAY_BUFFER, 4*4*vertices, gl.STATIC_DRAW );
 
-    vao = vBuffer;
-    fb = vFeedback;
         gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
+        vao = vBuffer;
+        fbo = vFeedback;
 }
+
 //
 // RETURNS NORMAL DEVICE COORDINATES NDC FOR OPENGL CANVAS
 //
@@ -372,6 +365,4 @@ function addXYVertex( xy ) {
 //
 // Random Number [0,1]
 //
-function rand( ) {
-    return Math.random( );
-}
+function rand( ) { return Math.random( ); }
