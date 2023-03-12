@@ -1,25 +1,31 @@
 //
 // GLOBAL ARRAY FOR VERTICES, COLORS AND POINTSIZE
 //
-let vertices = 0;
-let pointsize = 10;
-let vBufferData = [],
-    cBufferData = [],
-    vFeedbackData = [];
-let vBuffer,
-    cBuffer,
-    vFeedback;
+let vertices;
+let pointSize;
+let vBufferData;
+let cBufferData;
+let fBufferData;
 //
 // GLOBAL OPENGL OBJECTS
 //
+let vBuffer;
+let cBuffer;
+let fBuffer;
 let canvas;
-let gl;
 let shader;
+let vbo;
+let fbo;
+let gl;
 
 //
 // GLOBAL TIMER
 //
-let now, then;
+let now;
+let then;
+let fps;
+let counter;
+let frametime;
 
 /** INITIALIZE WEBGL **/
 window.onload = () =>
@@ -52,14 +58,10 @@ window.onload = () =>
 
     // SET TIME
     now = then = performance.now() / 1000;
-
+    counter = frametime = fps = 0;
     // SETUP OPENGL BUFFERS
     setupBuffers();
-    addVertex([0,0], [1.0,0.2,0.5,1.0]);
-    addVertex([0.55,0.55], [1.0,0.2,0.5,1.0]);
-    addVertex([0.55,-0.55], [1.0,0.2,0.5,1.0]);
-    addVertex([-0.55,0.55], [1.0,0.2,0.5,1.0]);
-    addVertex([-0.55,-0.55], [1.0,0.2,0.5,1.0]);
+
     updateBuffers();
 
     // FIT TO VIEWPORT
@@ -68,7 +70,6 @@ window.onload = () =>
     // MAIN RENDER LOOP
     render();
 }
-let fbo, vao;
 //
 // MAIN RENDER LOOP
 //
@@ -79,20 +80,22 @@ function render( ) {
     renderTime();
 
     gl.bindBufferBase( gl.TRANSFORM_FEEDBACK_BUFFER, 0, fbo );
-    gl.bindBuffer( gl.ARRAY_BUFFER, vao );
+    gl.bindBuffer( gl.ARRAY_BUFFER, vbo );
 
     gl.vertexAttribPointer( shader.pointers.apos,4, gl.FLOAT, false, 0, 0) ;
     gl.enableVertexAttribArray( shader.pointers.apos );
 
     gl.beginTransformFeedback( gl.POINTS );
     gl.drawArrays( gl.POINTS, 0, vertices );
-    gl.endTransformFeedback();
+    gl.endTransformFeedback( );
 
     gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
     gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
-    vao===vBuffer?   vao = vFeedback : vao = vBuffer;
-    fbo===vFeedback? fbo = vBuffer   : fbo = vFeedback;
+    vbo===vBuffer? vbo = fBuffer :
+        vbo = vBuffer;
+    fbo===fBuffer? fbo = vBuffer :
+        fbo = fBuffer;
 
     requestAnimFrame( render );
 }
@@ -100,9 +103,6 @@ function render( ) {
 //
 // SETS TIME DELTA BETWEEN CURRENT LAST AND CURRENT FRAME
 //
-let frametime = 0,
-    fps = 0,
-    counter = 0;
 function renderTime(){
 
     now = performance.now() / 1000;
@@ -115,8 +115,10 @@ function renderTime(){
     then = now;
 
     if( ++counter >= 20 ){
-        document.getElementById("frametime").innerHTML = 'frametime: ~'+ frametime.toFixed(4) +'s';
-        document.getElementById("fps").innerHTML = 'frames: ~'+fps.toFixed()+'/s';
+        document.getElementById("frametime")
+            .innerHTML = 'frametime: ~'+ frametime.toFixed(4) +'s';
+        document.getElementById("fps")
+            .innerHTML = 'frames: ~'+fps.toFixed()+'/s';
         counter = 0;
     }
 
@@ -256,6 +258,20 @@ function compileShader( type, code ) {
 
 function setupBuffers() {
 
+    vertices = 0;
+    pointSize = 10;
+    vBufferData = [];
+    cBufferData = [];
+    fBufferData = [];
+
+    // DEMO
+    addVertex([0,0], [1.0,0.2,0.5,1.0]);
+    addVertex([0.55,0.55], [1.0,0.2,0.5,1.0]);
+    addVertex([0.55,-0.55], [1.0,0.2,0.5,1.0]);
+    addVertex([-0.55,0.55], [1.0,0.2,0.5,1.0]);
+    addVertex([-0.55,-0.55], [1.0,0.2,0.5,1.0]);
+    //
+
     {
         // CREATE BUFFER
         vBuffer = gl.createBuffer( );
@@ -288,11 +304,11 @@ function setupBuffers() {
 
     {
         // CREATE BUFFER
-        vFeedback = gl.createBuffer( );
+        fBuffer = gl.createBuffer( );
         // SELECT BUFFER
-        gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
+        gl.bindBuffer( gl.ARRAY_BUFFER, fBuffer );
         // FILL WITH DATA
-        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(vFeedbackData), gl.STATIC_DRAW );
+        gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(fBufferData), gl.STATIC_DRAW );
         // "CONNECT" ATTRIBUTE AND BUFFER
         gl.vertexAttribPointer( shader.pointers.apos,4, gl.FLOAT, false, 0, 0) ;
         // "CONNECT" ATTRIBUTE AND BUFFER
@@ -301,12 +317,12 @@ function setupBuffers() {
 
     gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
-    gl.uniform1f( shader.pointers.size, pointsize );
+    gl.uniform1f( shader.pointers.size, pointSize );
     gl.uniform1f( shader.pointers.time, now );
     gl.uniform2fv( shader.pointers.ures, [canvas.width, canvas.height] );
 
-    vao = vBuffer;
-    fbo = vFeedback;
+    vbo = vBuffer;
+    fbo = fBuffer;
 
 }
 //
@@ -320,13 +336,13 @@ function updateBuffers( ) {
         gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
         gl.bufferData( gl.ARRAY_BUFFER, new Float32Array(cBufferData), gl.STATIC_DRAW );
 
-        gl.bindBuffer( gl.ARRAY_BUFFER, vFeedback );
+        gl.bindBuffer( gl.ARRAY_BUFFER, fBuffer );
         gl.bufferData( gl.ARRAY_BUFFER, 4*4*vertices, gl.STATIC_DRAW );
 
         gl.bindBuffer( gl.ARRAY_BUFFER, null);
 
-        vao = vBuffer;
-        fbo = vFeedback;
+        vbo = vBuffer;
+        fbo = fBuffer;
 }
 
 //
@@ -340,19 +356,19 @@ function getNormalDeviceCoords( e ) {
     };
 }
 const velocity = 0.1 ;
+const instances = 6;
 //
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
 function addVertex( xy, rgba ){
-    const x = 6;
-    for (let i = 0; i < x; i++) {
-        const alpha = (i / x) * Math.PI * 2;
+    for (let i = 0; i < instances; i++) {
+        const alpha = (i / instances) * Math.PI * 2;
         const vx = Math.cos(alpha) * velocity;
         const vy = Math.sin(alpha) * velocity;
         vBufferData.push(xy[0], xy[1], vx, vy);
         cBufferData.push(rgba[0], rgba[1], rgba[2], rgba[3]);
     }
-    vertices += x;
+    vertices += instances;
 }
 
 //

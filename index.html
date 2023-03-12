@@ -22,13 +22,13 @@
     }
     void main()
     {
-        gl_Position = vec4(a_vertex_position_velocity.xy, 0, 1);
         vec2 velocity = a_vertex_position_velocity.zw;// add a constant speed
         velocity += vec2(0.0, -0.9 * u_time); // apply gravity
         vec2 position = a_vertex_position_velocity.xy + velocity * u_time;
         // vec2 position = advanced_euclid(a_vertex_position_velocity.xy + velocity * u_time, u_resolution);
         position_feedback = vec4(position, velocity);
-        gl_PointSize =  10.0;
+        gl_Position = vec4(a_vertex_position_velocity.xy, 0, 1);
+        gl_PointSize =  u_point_size;
         frag_color = a_vertex_color;
     }
 
