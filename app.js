@@ -356,7 +356,7 @@ function getNormalDeviceCoords( e ) {
     };
 }
 const velocity = 0.1 ;
-const instances = 6;
+const instances = 13;
 //
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
 //
