@@ -25,7 +25,9 @@
     {
         vec2 velocity = a_vertex_position_velocity.zw;// add a constant speed
         velocity += vec2(0.0, -0.0981 * u_time); // apply gravity
+        // velocity = advanced_euclid(velocity, u_resolution);
         vec2 position = a_vertex_position_velocity.xy + velocity * u_time;
+        // vec2 position = a_vertex_position_velocity.xy + velocity * u_time;
         // vec2 position = advanced_euclid(a_vertex_position_velocity.xy + velocity * u_time, u_resolution);
         position_feedback = vec4(position, velocity);
         gl_Position = vec4(a_vertex_position_velocity.xy, 0, 1);

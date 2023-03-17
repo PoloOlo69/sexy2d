@@ -359,9 +359,10 @@ const velocity = 0.1 ;
 const instances = 13;
 //
 // ADDS A VERTEX AT XYZ WITH RGBA COLOR
-//
+// (x,y) = (cos(alpha), sin(alpha))
 function addVertex( xy, rgba ){
     for (let i = 0; i < instances; i++) {
+
         const alpha = (i / instances) * Math.PI * 2;
         const vx = Math.cos(alpha) * velocity;
         const vy = Math.sin(alpha) * velocity;
